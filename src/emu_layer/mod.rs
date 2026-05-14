@@ -18,6 +18,6 @@ use crate::error::EmuError;
 use crate::ir_engine::IrModule;
 
 /// Locates and resolves encrypted strings in the IR by running the bounded VM.
-pub fn resolve_strings(module: &mut IrModule) -> Result<(), EmuError> {
+pub fn resolve_strings(module: &mut IrModule) -> Result<usize, EmuError> {
     resolver::resolve_all(module)
 }
