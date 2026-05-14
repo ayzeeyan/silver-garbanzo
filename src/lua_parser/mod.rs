@@ -11,6 +11,10 @@ pub mod opcodes;
 #[allow(missing_docs)]
 pub mod proto;
 #[allow(missing_docs)]
+pub mod ast;
+#[allow(missing_docs)]
+pub mod compiler;
+#[allow(missing_docs)]
 pub mod source;
 
 pub use constants::LuaConstant;
