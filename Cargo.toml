@@ -1,0 +1,63 @@
+[package]
+name = "lunadec"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.78.0"
+license = "MIT OR Apache-2.0"
+description = "A production-grade Lua 5.1 decompiler and deobfuscator"
+repository = "silver-garbanzo"
+
+[lib]
+name = "lunadec"
+path = "src/lib.rs"
+
+[[bin]]
+name = "lunadec-cli"
+path = "src/main.rs"
+
+[dependencies]
+# Parsing: zero-copy, combinator-based bytecode & source parsing
+nom = "7.1"
+
+# CLI: derive-based argument parsing for lunadec-cli
+clap = { version = "4.5", features = ["derive"] }
+
+# Errors: structured, displayable error types across all modules
+thiserror = "1.0"
+
+# Top-level error handling: used ONLY in src/main.rs for ? on Box<dyn Error>
+anyhow = "1.0"
+
+# Parallelism: data-parallel iteration over multiple FunctionProto trees
+rayon = "1.10"
+
+# Logging: structured log macros (info!, debug!, trace!)
+log = "0.4"
+env_logger = "0.11"
+
+# IR ordering: deterministic BasicBlock iteration in CFG traversals
+indexmap = "2.2"
+
+# Compact collections: inline operand lists (≤4 operands avoid heap alloc)
+smallvec = "1.13"
+
+# Bitmask types: instruction format flags, opcode property bitsets
+bitflags = "2.5"
+
+# Serialization: optional IR dump to JSON for debugging (behind `dump` feature)
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.4"
+pretty_assertions = "1.4"
+
+[features]
+default = []
+dump = ["serde", "serde_json"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
