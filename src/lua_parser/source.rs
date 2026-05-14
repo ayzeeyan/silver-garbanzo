@@ -66,12 +66,22 @@ fn number(input: &str) -> IResult<&str, f64> {
 }
 
 fn expr(input: &str) -> IResult<&str, Expr> {
-    alt((
+    let mut base = alt((
         map(string_literal, Expr::String),
         map(number, Expr::Number),
         map(identifier, Expr::Ident),
         map(parse_table, Expr::Table),
-    ))(input)
+    ));
+
+    // Simplistic binary op
+    let (input, l) = base(input)?;
+    if let Ok((input, _)) = ws(tag(".."))(input) {
+        if let Ok((input, r)) = expr(input) {
+            return Ok((input, Expr::BinOp("..".to_string(), Box::new(l), Box::new(r))));
+        }
+    }
+
+    Ok((input, l))
 }
 
 fn parse_table(input: &str) -> IResult<&str, Vec<(Option<Expr>, Expr)>> {

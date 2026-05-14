@@ -82,11 +82,22 @@ impl<'a> Compiler<'a> {
                     }
                 }
             }
-            Stmt::CallStmt(expr) => {
-                let r = self.compile_expr(expr);
+            Stmt::CallStmt(Expr::Call(func, args)) => {
+                let f_reg = self.compile_expr(func);
+                let start_arg_reg = self.next_reg;
+                for arg in args {
+                    let r = self.compile_expr(arg);
+                    if r != start_arg_reg {
+                        self.instructions.push(Instruction {
+                            opcode: Opcode::Move,
+                            a: start_arg_reg, b: r as u16, c: 0, bx: 0, sbx: 0, raw: 0,
+                        });
+                    }
+                }
+
                 self.instructions.push(Instruction {
                     opcode: Opcode::Call,
-                    a: r, b: 1, c: 1, bx: 0, sbx: 0, raw: 0,
+                    a: f_reg, b: args.len() as u16 + 1, c: 1, bx: 0, sbx: 0, raw: 0,
                 });
             }
             _ => {}
@@ -123,6 +134,52 @@ impl<'a> Compiler<'a> {
                         a: r, b: 0, c: 0, bx: k as u32, sbx: 0, raw: 0,
                     });
                 }
+            }
+            Expr::Table(_) => {
+                self.instructions.push(Instruction {
+                    opcode: Opcode::NewTable,
+                    a: r, b: 0, c: 0, bx: 0, sbx: 0, raw: 0,
+                });
+            }
+            Expr::BinOp(op, a, b) => {
+                let r_a = self.compile_expr(a);
+                let r_b = self.compile_expr(b);
+                let opcode = match op.as_str() {
+                    ".." => Opcode::Concat,
+                    "+" => Opcode::Add,
+                    "-" => Opcode::Sub,
+                    "*" => Opcode::Mul,
+                    "/" => Opcode::Div,
+                    "%" => Opcode::Mod,
+                    "^" => Opcode::Pow,
+                    _ => Opcode::Move,
+                };
+                self.instructions.push(Instruction {
+                    opcode,
+                    a: r, b: r_a as u16, c: r_b as u16, bx: 0, sbx: 0, raw: 0,
+                });
+            }
+            Expr::Call(func, args) => {
+                let f_reg = self.compile_expr(func);
+                let start_arg_reg = self.next_reg;
+                for arg in args {
+                    let rr = self.compile_expr(arg);
+                    if rr != start_arg_reg {
+                        self.instructions.push(Instruction {
+                            opcode: Opcode::Move,
+                            a: start_arg_reg, b: rr as u16, c: 0, bx: 0, sbx: 0, raw: 0,
+                        });
+                    }
+                }
+
+                self.instructions.push(Instruction {
+                    opcode: Opcode::Call,
+                    a: f_reg, b: args.len() as u16 + 1, c: 2, bx: 0, sbx: 0, raw: 0,
+                });
+                self.instructions.push(Instruction {
+                    opcode: Opcode::Move,
+                    a: r, b: f_reg as u16, c: 0, bx: 0, sbx: 0, raw: 0,
+                });
             }
             _ => {}
         }

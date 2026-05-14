@@ -34,14 +34,30 @@ pub fn run(module: &mut IrModule) -> Result<PassStats, IrError> {
                     IrOp::SetTable(a, b, c) => {
                         uses.insert(*a); uses.insert(*b); uses.insert(*c);
                     }
+                    IrOp::GetTable(_, t, k) => {
+                        uses.insert(*t); uses.insert(*k);
+                    }
                     IrOp::Eq(_, b, c) | IrOp::Lt(_, b, c) | IrOp::Le(_, b, c) => {
                         uses.insert(*b); uses.insert(*c);
                     }
                     IrOp::Concat(_, args) => {
                         uses.extend(args);
                     }
+                    IrOp::TailCall(f, args) => {
+                        uses.insert(*f); uses.extend(args);
+                    }
+                    IrOp::Test(_, s) => { uses.insert(*s); }
+                    IrOp::TestSet(_, a, b) => { uses.insert(*a); uses.insert(*b); }
+                    IrOp::SelfOp(_, a, b) | IrOp::TForLoop(_, a, b) => { uses.insert(*a); uses.insert(*b); }
+                    IrOp::ForLoop(_, s) | IrOp::ForPrep(_, s) => { uses.insert(*s); }
                     _ => {}
                 }
+            }
+            match &block.terminator {
+                crate::ir_engine::Terminator::CondBranch(c, _, _) => { uses.insert(*c); }
+                crate::ir_engine::Terminator::Return(rets) => { uses.extend(rets); }
+                crate::ir_engine::Terminator::TailCall(f, args) => { uses.insert(*f); uses.extend(args); }
+                _ => {}
             }
         }
 
@@ -49,7 +65,7 @@ pub fn run(module: &mut IrModule) -> Result<PassStats, IrError> {
             let orig_len = block.ops.len();
             block.ops.retain(|op| {
                 match op {
-                    IrOp::LoadConst(d, _) | IrOp::Move(d, _) | IrOp::Add(d, _, _) | IrOp::Sub(d, _, _) | IrOp::Mul(d, _, _) | IrOp::Div(d, _, _) => {
+                    IrOp::LoadConst(d, _) | IrOp::Move(d, _) | IrOp::Add(d, _, _) | IrOp::Sub(d, _, _) | IrOp::Mul(d, _, _) | IrOp::Div(d, _, _) | IrOp::GetTable(d, _, _) | IrOp::GetGlobal(d, _) | IrOp::Concat(d, _) => {
                         uses.contains(d)
                     }
                     _ => true // Keep side-effect operations
